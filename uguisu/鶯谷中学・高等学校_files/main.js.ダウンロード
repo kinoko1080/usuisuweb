@@ -1,0 +1,347 @@
+/**
+ * ================================================
+ *
+ * [javascript Common]
+ * 必須ライブラリ : jQuery, velocity
+ *
+ * ================================================
+ */
+/**
+ * 実行
+ * OFFにしたいものはコメントアウトする
+ */
+$(function() {
+	// 初期実行
+	$.main.setWb();
+	$.main.setGETqs();
+	$.main.checkRespMode();
+	$.main.setWbVer();
+	$.main.sScroll();
+	$.main.getScrPos();
+	$.main.getMobile();
+	// loadイベント
+	$(window).ready(function() {
+		$.main.roImg();
+		$.main.roOpa();
+		$.main.adjList();
+		// $.main.pageTop();
+		$.main.initDebug();
+	});
+	// resizeイベント
+	$(window).bind('resize', function() {
+		$.main.checkRespMode();
+		$.main.getMobile();
+	});
+	// scrollイベント
+	$(window).bind('scroll', function() {
+		// $.main.pageTop();
+		$.main.getScrPos();
+	});
+});
+/**
+ * global params
+ */
+$.params = {
+	qsParm: 		new Array(), // GETパラメータ
+	userAgent: 		'',
+	browserIE: 		0, // IE判定
+	browser_v: 		0, // IEバージョン番号
+	browser_nm: 	'', // browser名
+	roImgCache: 	'', // 画像切り替えロールオーバー元ソース
+	ua: 			'', // UA
+	isIE: 			false, // IE判定
+	isIE6: 			false, // IE6判定
+	isIE7: 			false, // IE7判定
+	isIE8: 			false, // IE8判定
+	isIE9: 			false, // IE9判定
+	isIE10: 		false, // IE10判定
+	isIE11: 		false, // IE11判定
+	isiPhone: 		false, // iPhone判定
+	isiPad: 		false, // iPad判定
+	isiPod: 		false, // iPod判定
+	isAndroid: 		false, // Android判定
+	isWinPhone: 	false, // WinPhone判定
+	isMobile: 		false, // Mobile判定 (getMobile結果)
+	isNavOpen: 		false, // メニュー開閉判定(スマフォメニューなどに使用)
+	spBreakPoint: 	768, // ブレークポイント
+	wWidth: 		0, // ウィンドウ幅
+	wHeight: 		0, // ウィンドウ高さ
+	isRespMode: 	false, // レスポンシブ判定
+	isPageTopShow: 	false, // pagetop表示判定
+	pageTopPoint: 	100, // pagetop表示Y座標
+	scrTop: 		0, // Y軸スクロール量
+	scrLeft: 		0, // X軸スクロール量
+	orgMode: 		null, // ロード時のレスポンシブ状態 (レスポンシブで2 そうでなければ1)
+	currentMode: 	null, // 現在のレスポンシブ状態 (レスポンシブで2 そうでなければ1)
+	isChangeMode: 	false, // レスポンシブ状態が変更になったらtrue
+	isDebug: 		false, // デバッグモード判定
+	resizeTimer: 	false // イベント制御用タイマー
+};
+/**
+ * functions
+ */
+$.main = {
+	/**
+	 * デバッグの準備
+	 */
+	initDebug: function() {
+		if (!$.params.isDebug) return;
+
+		$('<div id="pDebug" />').prependTo('body').css({
+			position: 'fixed',
+			zIndex: 99999,
+			top: 0,
+			right: 0,
+			backgroundColor: 'rgba(0,0,0,0.8)',
+			color: '#FFFFFF',
+			padding: 10,
+			height: '100%',
+			overflow: 'auto'
+		});
+
+		$('#pDebug').append('<div><a href="javascript:void(0)" class="toggle" style="color: #FFFFFF;">SHOW</a></div><div class="inner" />');
+
+		$(document).on('click', '#pDebug .toggle', function() {
+			$('#pDebug .inner').toggle();
+		});
+
+		$.main.showDebug();
+
+		$(window).on('resize scroll', function() {
+			if ($.params.resizeTimer !== false) {
+				clearTimeout($.params.resizeTimer);
+			}
+
+			$.params.resizeTimer = setTimeout(function() {
+				$.main.showDebug();
+			}, 500);
+		});
+	},
+	/**
+	 * デバッグ情報の出力
+	 */
+	showDebug: function() {
+		var src = '';
+
+		$.each($.params, function(key, val) {
+			src += '<div><span style="font-weight: bold;">' + key + '</span> : ' + val + '</div>';
+		});
+
+		$('#pDebug .inner').html(src);
+	},
+	/**
+	 * strict対策blank open
+	 * @param 開くURL
+	 */
+	openBlank: function(url) {
+		window.open(url);
+	},
+	/**
+	 * 画像の先読み
+	 * @param 画像配列
+	 */
+	preloadImg: function(arguments) {
+		if (!arguments) return;
+
+		for(var i = 0; i < arguments.length; i++) {
+			$('<img>').attr('src', arguments[i]);
+		}
+	},
+	/**
+	 * GET値の取得
+	 * @return GET値をセットしたグローバル変数qsParm
+	 */
+	setGETqs: function() {
+		var query = window.location.search.substring(1),
+			parms = query.split('&');
+
+		for (var i = 0; i < parms.length; i++) {
+			var pos = parms[i].indexOf('=');
+
+			if (pos > 0) {
+				var key = parms[i].substring(0, pos),
+					val = parms[i].substring(pos +1);
+
+				$.params.qsParm[key] = val;
+			}
+		}
+
+		return $.params.qsParm;
+	},
+	/**
+	 * ブラウザ判定
+	 */
+	setWb: function() {
+		$.params.ua = navigator.userAgent;
+
+		$.params.isIE 	= $.params.ua.match(/msie/i),
+		$.params.isIE6 	= $.params.ua.match(/msie [6.]/i),
+		$.params.isIE7 	= $.params.ua.match(/msie [7.]/i),
+		$.params.isIE8 	= $.params.ua.match(/msie [8.]/i),
+		$.params.isIE9 	= $.params.ua.match(/msie [9.]/i),
+		$.params.isIE10 = $.params.ua.match(/msie [10.]/i),
+		$.params.isIE11 = $.params.ua.match(/msie [11.]/i);
+	},
+	/**
+	 * Webブラウザバージョンの取得
+	 */
+	setWbVer: function() {
+		if (/*@cc_on!@*/false) {
+			$.params.userAgent = window.navigator.userAgent.toLowerCase(),
+			$.params.ua = navigator.userAgent;
+
+			$.params.browserIE = 1;
+			$.params.browser_nm = "IE";
+
+			if ($.params.userAgent.match(/MSIE (¥d¥.¥d+)/)) {$.params.browser_v = parseFloat(RegExp.$1);}//IE6.7.8.9
+
+			}
+			else if ($.params.ua.indexOf("firefox") > -1) {$.params.browser_nm = "Firefox";}
+			else if ($.params.ua.indexOf("opera") > -1) {$.params.browser_nm = "Opera";}
+			else if ($.params.ua.indexOf("chrome") > -1) {$.params.browser_nm = "Chrome";}
+			else if ($.params.ua.indexOf("safari") > -1) {$.params.browser_nm = "Safari";}
+			else {
+			$.params.browser_nm = "Unknown";
+		}
+	},
+	/**
+	 * 画像切り替えロールオーバー
+	 */
+	roImg: function() {
+		var imgCache = new Array;
+
+		$(document).on({
+			mouseenter: function() {
+				var imgSrc 		= $(this).attr('src'),
+					imgSrcDot 	= imgSrc.lastIndexOf('.'),
+					imgSrcOver 	= imgSrc.substr(0, imgSrcDot) + '_on' + imgSrc.substr(imgSrcDot, 4);
+
+				imgCache[$(this)] = imgSrc;
+
+				$(this).attr('src', imgSrcOver);
+			},
+			mouseleave: function() {
+				$(this).attr('src', imgCache[$(this)]);
+			}
+		}, 'a > .roImg');
+	},
+	/**
+	 * 画像透明度ロールオーバー
+	 */
+	roOpa: function() {
+		$(document).on({
+			mouseenter: function() {
+				$(this).fadeTo(300, 0.5);
+			},
+			mouseleave: function() {
+				$(this).stop(true, true).fadeTo(300, 1.0);
+			}
+		}, '.jqHover');
+	},
+	/**
+	 * 単純な高さ合わせ
+	 * (画像があると読み込み順の関係でうまく動かないことがある)
+	 */
+	adjList: function() {
+		$('.adjustList').each(function() {
+			var setHeight = 0;
+
+			$(this).children().each(function() {
+				var getHeight = $(this).height();
+
+				if (getHeight > setHeight) {
+					setHeight = getHeight;
+				}
+			});
+
+			$(this).children().height(setHeight);
+
+			if ($(this).children().length == 0) $(this).remove();
+		});
+	},
+	/**
+	 * スムーススクロール
+	 * @param オフセット値
+	 * @param スピード
+	 * @param イージング
+	 */
+	sScroll: function(offset, duration, easing) {
+		$(document).on('click', 'a[href^="#"].scroll', function() {
+			var $anchor = $(this),
+				$target = $anchor.attr('href'),
+				duration = duration !== 500 && $.isNumeric(duration) ? duration : 500,
+				easing = easing !== 'easeInQuad' ? easing : 'easeInQuad';
+
+			$($target).velocity('stop').velocity('scroll', {
+				offset: offset,
+				duration:duration,
+				easing: easing
+			});
+
+			return false;
+		});
+	},
+	/**
+	 * レスポンシブ状態のチェック
+	 */
+	checkRespMode: function() {
+		$.params.wHeight 		= parseInt($(window).height()),
+		$.params.wWidth 		= parseInt($(window).width()),
+		$.params.isRespMode 	= $.params.wWidth < $.params.spBreakPoint ? true : false;
+
+		if ($.params.orgMode === null) {
+			$.params.orgMode = $.params.isRespMode ? 2 : 1;
+			$.params.currentMode = $.params.orgMode;
+		} else {
+			oldMode = $.params.currentMode;
+			$.params.currentMode = $.params.isRespMode ? 2 : 1;
+
+			$.params.isChangeMode = oldMode !== $.params.currentMode ? true : false;
+		}
+	},
+	/**
+	 * スクロール位置の取得
+	 */
+	getScrPos: function() {
+		$.params.scrTop = $(window).scrollTop(),
+		$.params.scrLeft = $(window).scrollLeft();
+	},
+	/**
+	 * 標準的なpagetop(表示／非表示のみ)
+	 * 表示ポイントをpageTopPointに設定
+	 * 後から追加する要素には未対応
+	 */
+	pageTop: function() {
+		if ($.params.scrTop > $.params.pageTopPoint) {
+			if (!$.params.isPageTopShow) {
+				$.params.isPageTopShow = true;
+				$('#pageTopVox').velocity('stop').show().velocity({
+					opacity: 1
+				}, 200);
+			}
+		} else {
+			if ($.params.isPageTopShow) {
+				$.params.isPageTopShow = false;
+				$('#pageTopVox').velocity('stop').velocity({
+					opacity: 0
+				}, 200, function() {
+					$(this).hide();
+				});
+			}
+		}
+	},
+	/**
+	 * iPhone / iPad / iPod / Android / winPhone 判定
+	 */
+	getMobile: function() {
+		$.params.ua = navigator.userAgent;
+
+		$.params.isiPhone 	= $.params.ua.indexOf('iPhone') != -1 ? true : false,
+		$.params.isiPad 	= $.params.ua.indexOf('iPad') != -1 ? true : false,
+		$.params.isiPod 	= $.params.ua.indexOf('iPod') != -1 ? true : false,
+		$.params.isAndroid 	= $.params.ua.indexOf('android') != -1 || $.params.ua.indexOf('Android') != -1 ? true : false,
+		$.params.isWinPhone = $.params.ua.indexOf('Windows Phone') != -1 ? true : false;
+
+		$.params.isMobile = $.params.isiPhone || $.params.isiPad || $.params.isiPod || $.params.isAndroid || $.params.isWinPhone ? true : false;
+	}
+};

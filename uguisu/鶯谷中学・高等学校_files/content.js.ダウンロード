@@ -1,0 +1,239 @@
+/**
+ * ============================================================
+ *
+ * [content]
+ *
+ * ============================================================
+ */
+var isSkip 			= false,
+	isPopup 		= false,
+	isOpen 			= false,
+	isAllowClose 	= false,
+	hHeight 		= 0,
+	hHeightOrg 		= 0,
+	defaultFlow;
+
+(function($) {
+	$(function() {
+		isSkip = $('body').hasClass('skip') ? true : false;
+		isPopup = $('body').hasClass('isPopup') ? true : false;
+		/**
+		 ********************************************
+		 * load event
+		 ********************************************
+		 */
+		$(window).on('load', function() {
+			defaultFunctions.init();
+		});
+		/**
+		 ********************************************
+		 * resize event
+		 ********************************************
+		 */
+		$(window).on('resize', function() {
+			if ($.params.resizeTimer !== false) {
+				clearTimeout($.params.resizeTimer);
+			}
+
+			$.params.resizeTimer = setTimeout(function() {
+				defaultFunctions.adjust();
+			}, 500);
+		});
+		/**
+		 ********************************************
+		 * scroll event
+		 ********************************************
+		 */
+
+		/**
+		 ********************************************
+		 * click event
+		 ********************************************
+		 */
+		$(document).on('click', '#pageTopVox a', function() {
+			$('#wrapper').velocity('scroll', 500);
+		});
+
+		$(document).on('click touchstart', '.popupCloseBt, #alphaBg, .popupBtItemClose', function() {
+			if ($('.popupWrapper, #alphaBg').hasClass('.velocity-animating') || !isAllowClose) return;
+			$('body').removeClass('open');
+			defaultFunctions.closePopup();
+		});
+
+		$(document).on('keydown', function(e) {
+			if (isOpen && e.keyCode === 27) {
+				if ($('.popupWrapper, #alphaBg').hasClass('.velocity-animating') || !isAllowClose) return;
+				$('body').removeClass('open');
+				defaultFunctions.closePopup();
+				return false;
+			}
+		});
+
+		$('.popupBtItem').on('click', function() {
+			if ($('.popupWrapper, #alphaBg').hasClass('.velocity-animating')) return;
+
+			var id = $(this).attr('data-popup');
+
+			$('#' + id).css('opacity', 0).show();
+			$('#' + id).hide().css('opacity', 1);
+
+			$('body').addClass('open');
+
+			defaultFunctions.changePopup('#' + id);
+		});
+
+		$('#gNav a').on('click', function() {
+			if ($('.mMenu').hasClass('.velocity-animating')) return;
+
+			var index = $('#gNav a').index(this);
+
+			$('#gNav a').not(index).removeClass('active').eq(index).addClass('active');
+			$('.mmItem').not(index).velocity('fadeOut', 150).eq(index).velocity('fadeIn', 250);
+		});
+
+		$('#mMenu .mmCloseBt').on('click', function() {
+			if ($('.mMenu').hasClass('.velocity-animating')) return;
+
+			var index = $('#mMenu .mmCloseBt').index(this);
+
+			$('#gNav a').removeClass('active');
+			$('.mmItem').velocity('fadeOut', 250);
+		});
+		/**
+		 ********************************************
+		 * hover event
+		 ********************************************
+		 */
+
+		/**
+		 **********************************************************
+		 *
+		 * sns
+		 *
+		 **********************************************************
+		 */
+
+	});
+}(jQuery));
+/**
+ ********************************************
+ * functions
+ ********************************************
+ */
+var defaultFunctions = {
+	init: function() {
+		hHeightOrg = $('#siteHeader').outerHeight();
+
+		$('.roFadeImg').rolloverFade();
+
+		$('.rplSPImg').replaceImageSP({
+			breakPoint: $.params.spBreakPoint
+		});
+
+		setTimeout(function() {
+			if (isPopup) defaultFunctions.initPopup();
+			defaultFunctions.runIntro();
+		}, 500);
+
+		defaultFunctions.adjust();
+	},
+	adjust: function() {
+		hHeight = $('#siteHeader').outerHeight();
+	},
+	runIntro: function() {
+		if (isSkip) return;
+
+		$('#wrapper').css({
+			// opacity: 0,
+			visibility: 'visible'
+		});
+
+		$('#loading').velocity('fadeOut', 500);
+
+		if (location.hash !== '') {
+			$(location.hash).velocity('stop').velocity('scroll', {
+				// offset: $.param.isRespMode ? -hHeight : -$('#gNav').outerHeight(),
+				duration: 10,
+				easing: 'easeInQuad'
+			});
+		}
+
+		$('#wrapper').stop().velocity({
+			opacity: 1
+		}, {
+			delay: 400,
+			duration: 250,
+			complete: function() {
+				isDefaultFirst = false;
+			}
+		});
+	},
+	initPopup: function() {
+		var popupIDs = new Array;
+
+		$('.popupBtItem:not(.exclude)').each(function() {
+			var popupID = $(this).attr('data-popup');
+
+			if ($.inArray(popupID, popupIDs) === -1) {
+				popupIDs.push(popupID);
+			}
+		});
+
+		var popupSrc = '<div class="popupWrapper vertical s1-6r"><div class="closeVox"><a href="javascript:void(0)" class="popupCloseBt"><span><!-- --></span><span><!-- --></span></a></div><div class="contentWrapper"><div class="content"><!-- --></div></div></div><!-- /popupWrapper01 -->';
+
+		$('#popupContents .content').each(function(i) {
+			var src = $(this).html(),
+				group = $(this).attr('data-group');
+
+			$(popupSrc).appendTo('#wrapper').attr('id', popupIDs[i]).addClass(group);
+			$('#' + popupIDs[i]).find('.content').html(src);
+
+			$(this).remove();
+		});
+
+		$('.popupWrapper').each(function() {
+			$(this).css('visibility', 'hidden').popupAdjust({
+				realtimeAdjust: false
+			}).css('visibility', 'visible').hide();
+		});
+	},
+	changePopup: function(id)  {
+		if (!isOpen) {
+			isOpen = true;
+
+			$(window).popupAdjust.adjust(id);
+
+			$('#alphaBg').show().velocity('stop').velocity({
+				opacity: 0.8
+			}, 200, function() {
+				if ($.params.isIE6 || $.params.isIE7 || $.params.isIE8) {
+					$(id).show();
+				} else {
+					$(id).fadeIn(200);
+				}
+				isAllowClose = true;
+			});
+		}
+	},
+	closePopup: function() {
+		if ($.params.isIE6 || $.params.isIE7 || $.params.isIE8) {
+			$('.popupWrapper').hide();
+			$('#alphaBg').velocity('stop').velocity({
+				opacity: 0
+			}, 200, function() {
+				$(this).hide();
+				isOpen = false;
+			});
+		} else {
+			$('.popupWrapper').velocity('fadeOut', 200, function() {
+				$('#alphaBg').velocity('stop').velocity({
+					opacity: 0
+				}, 200, function() {
+					$(this).hide();
+					isOpen = false;
+				});
+			});
+		}
+		$('#popupWrapperMovie .content').empty();
+	}
+};
